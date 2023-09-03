@@ -15,7 +15,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $userId = $_GET['user_id'];
     $_SESSION['user'] = $userId;
 
-    $query = "SELECT * FROM tasks WHERE user_id = ?";
+    $query = "SELECT t.id, t.title, t.expiry_date, t.completed, c.category_name AS category_name FROM tasks t
+          LEFT JOIN categories c ON t.category_id = c.category_id
+          WHERE t.user_id = ?";
     $stmt = $conn->prepare($query);
     $stmt->bind_param("i", $userId);
     $stmt->execute();
@@ -31,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 'expiry_date' => $row['expiry_date'],
                 //default value of 0 is set to false for frontend
                 'completed' => (bool)$row['completed'],
+                'category_name' => $row['category_name'],
             );
         }
 
@@ -43,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         // it will send an empty array in this case
     } else {
         http_response_code(500);
-        echo json_encode(array());
+        echo json_encode(["message" => "Error adding task: " . $stmt->error]);
         exit;
     }
 }
@@ -57,11 +60,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $userId = $taskData->userId;
     $title = $taskData->title;
     $expiryDate = $taskData->expiryDate;
+    $selectedCategory = $taskData->category_id;
 
     //inserting data in tasks table
-    $query = "INSERT INTO tasks (user_id, title, expiry_date) VALUES (?, ?, ?)";
+    $query = "INSERT INTO tasks (user_id, title, expiry_date, category_id) VALUES (?, ?, ?, ?)";
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("iss", $userId, $title, $expiryDate);
+    $stmt->bind_param("issi", $userId, $title, $expiryDate, $selectedCategory);
 
     if ($stmt->execute()) {
         // Task added successfully

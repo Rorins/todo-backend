@@ -1,6 +1,5 @@
 <?php
-session_start();
-include 'database.php';
+include './config/database.php';
 
 header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Allow-Origin: http://127.0.0.1:5173");
@@ -13,7 +12,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     //fetching user id from session local storage to associate it to his tasks
     //assign it to the session user so I can use it elsewhere
     $userId = $_GET['user_id'];
-    $_SESSION['user'] = $userId;
 
     $query = "SELECT t.id, t.title, t.expiry_date, t.completed, c.category_name AS category_name FROM tasks t
           LEFT JOIN categories c ON t.category_id = c.category_id

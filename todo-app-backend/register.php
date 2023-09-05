@@ -1,6 +1,7 @@
 <?php
 // Include database connection
-include 'database.php';
+include './config/database.php';
+include './config/token.php';
 
 header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Allow-Origin: http://127.0.0.1:5173");
@@ -56,12 +57,17 @@ if ($method === 'POST') {
     //sending json back with response code
     if ($stmt->execute()) {
         $userId = $stmt->insert_id; //id of new user
+
+        //token generation
+        $token = generateToken($userId);
+
         $response = [
             'status' => 'success',
             'message' => 'Login successful',
             'user' => [
                 'id' => $userId,
             ],
+            'token' => $token,
         ];
         http_response_code(200);
     } else {

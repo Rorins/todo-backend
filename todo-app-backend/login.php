@@ -1,7 +1,8 @@
 <?php
-session_start();
+
 // Include database connection
-include 'database.php';
+include './config/database.php';
+include './config/token.php';
 
 header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Allow-Origin: http://127.0.0.1:5173");
@@ -29,6 +30,9 @@ $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
 if ($user && password_verify($password, $user['password'])) {
+    //token generation
+    $token = generateToken($user['id']);
+
     //sending it out to the frontend to save it to local storage
     $response = [
         'status' => 'success',
@@ -36,13 +40,14 @@ if ($user && password_verify($password, $user['password'])) {
         'user' => [
             'id' => $user['id'],
         ],
+        'token' => $token,
     ];
 
     http_response_code(200);
 } else {
     http_response_code(401);
     $response["status"] = "error";
-    $response["message"] = "Login failed";;
+    $response["message"] = "Login failed";
 }
 
 echo json_encode($response);

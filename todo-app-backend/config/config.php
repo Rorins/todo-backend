@@ -1,4 +1,4 @@
 <?php
 return [
-    'secretKey' => 'something',
+    'secretKey' => 'secretkey',
 ];

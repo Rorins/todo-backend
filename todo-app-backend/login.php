@@ -1,8 +1,8 @@
 <?php
 
 // Include database connection
-include './config/database.php';
-include './config/token.php';
+include_once './config/database.php';
+include_once './config/token.php';
 
 header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Allow-Origin: http://127.0.0.1:5173");
@@ -15,20 +15,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-// Get POST data
-$data = json_decode(file_get_contents("php://input"));
+// Get POST data from the frontend
+$receivedData = file_get_contents("php://input");
+error_log("Received data: " . $receivedData);
+$data = json_decode($receivedData);
+error_log("Decoded data: " . print_r($data, true));
 
+//email validation, if it's not filtered I send out a json response to display
 $email = filter_var($data->email, FILTER_VALIDATE_EMAIL);
+if (!$email) {
+    http_response_code(400);
+    $response = [
+        'status' => 'error',
+        'message' => 'Invalid email format',
+    ];
+    echo json_encode($response);
+    exit;
+}
+
+//password 
 $password = $data->password;
 
-//Query to get users 
+//QUERY
 $query = "SELECT * FROM users WHERE email = ?";
+//prepared statement to prevent sql injection
 $stmt = $conn->prepare($query);
 $stmt->bind_param("s", $email);
 $stmt->execute();
+//saving the result in the user variable
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
+//SENDING TOKEN BACK
+
+//verifying password by comparing plain password to hashed password in the db
 if ($user && password_verify($password, $user['password'])) {
     //token generation
     $token = generateToken($user['id']);

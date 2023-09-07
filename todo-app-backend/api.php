@@ -9,22 +9,26 @@ header("Content-Type: application/json");
 
 // FETCH TASKS
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    //fetching user id from session local storage to associate it to his tasks
-    //assign it to the session user so I can use it elsewhere
+    //Fetchin tasks with related categories where the user_id is equal to the authenticated user
+    //so I get only the authenticated user tasks
     $userId = $_GET['user_id'];
 
-    $query = "SELECT t.id, t.title, t.expiry_date, t.completed, c.category_name AS category_name FROM tasks t
-          LEFT JOIN categories c ON t.category_id = c.category_id
-          WHERE t.user_id = ?";
+    $query = "SELECT tasks.id, tasks.title, tasks.expiry_date, tasks.completed, categories.category_name 
+    FROM tasks INNER JOIN categories 
+    ON tasks.category_id = categories.category_id 
+    WHERE tasks.user_id = ?";
     $stmt = $conn->prepare($query);
     $stmt->bind_param("i", $userId);
     $stmt->execute();
     $result = $stmt->get_result();
 
+    //if the result is positive I create an associative array with fetch_assoc
+    //where the column is the key and te row is the value and wrap each row of the table in the row variable
+    //this way I get a single task inside of tasks that gets looped, so we are constructing tasks
     if ($result) {
-        $tasks = array();
+        $tasks = [];
         while ($row = $result->fetch_assoc()) {
-            $tasks[] = array(
+            $tasks[] = [
                 //I will use the id to delete and update the specific task
                 'id' => $row['id'],
                 'title' => $row['title'],
@@ -32,16 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 //default value of 0 is set to false for frontend
                 'completed' => (bool)$row['completed'],
                 'category_name' => $row['category_name'],
-            );
+            ];
         }
 
         //sending out the tasks in json format
         http_response_code(200);
         echo json_encode($tasks);
         exit;
-
-        // handling if there aren't any tasks in the table
-        // it will send an empty array in this case
     } else {
         http_response_code(500);
         echo json_encode(["message" => "Error adding task: " . $stmt->error]);
@@ -51,13 +52,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
 //CREATE TASKS
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // CREATE TASK, THIS IS WORKING WILL NEED TO ADD THE ID LATER
     $taskData = json_decode(file_get_contents("php://input"));
 
-    //retrieving user id to associate task with his user
+    //tasks will have this data:
     $userId = $taskData->userId;
     $title = $taskData->title;
     $expiryDate = $taskData->expiryDate;
+
+    //if category id doesn't exist or is null/ empty we send out error
+    if (!isset($taskData->category_id) || empty($taskData->category_id)) {
+        http_response_code(400);
+        echo json_encode(
+            $response = [
+                'status' => 'error',
+                'message' => 'Category is required',
+            ]
+        );
+        exit;
+    }
+
     $selectedCategory = $taskData->category_id;
 
     //inserting data in tasks table
@@ -68,7 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($stmt->execute()) {
         // Task added successfully
         echo json_encode([
-            "message" => "Task added successfully", 'user' => [
+            "message" => "Task added successfully",
+            'user' => [
                 'id' => $userId,
             ],
         ]);

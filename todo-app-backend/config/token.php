@@ -6,6 +6,7 @@ include_once __DIR__ . '/config.php';
 $config = include(__DIR__ . '/config.php');
 $secretKey = $config['secretKey'];
 
+//token will contain the userId and expiration time
 function generateToken($userId)
 {
     global $secretKey;
